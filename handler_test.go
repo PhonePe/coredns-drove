@@ -13,8 +13,8 @@ import (
 
 type MockDroveClient struct{}
 
-func (*MockDroveClient) FetchApps() (*DroveApps, error) {
-	apps := &DroveApps{}
+func (*MockDroveClient) FetchApps() (*DroveAppsResponse, error) {
+	apps := &DroveAppsResponse{}
 	json.Unmarshal([]byte(`{"status": "ok", "message": "ok", "data":[{"appId": "PS", "vhost": "example.com", "tags": {}, "hosts":[{"host": "host", "port": 1234, "portType": "http"}]}]}`), apps)
 	return apps, nil
 }

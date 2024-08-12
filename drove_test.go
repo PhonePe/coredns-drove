@@ -33,7 +33,7 @@ func TestAppFetch(t *testing.T) {
 	defer server.Close()
 
 	// Use Client & URL from our local test server
-	client := NewDroveClient(server.URL, DroveAuthConfig{AccessToken: ""})
+	client := NewDroveClient(DroveConfig{Endpoint: server.URL, AuthConfig: DroveAuthConfig{AccessToken: ""}})
 	client.Init()
 	assert.NotNil(t, client.Leader)
 
@@ -63,15 +63,15 @@ func TestLeaderElection(t *testing.T) {
 	})
 
 	// Use Client & URL from our local test server
-	client := NewDroveClient(fmt.Sprintf("%s", server.URL), DroveAuthConfig{AccessToken: ""})
+	client := NewDroveClient(DroveConfig{Endpoint: server.URL, AuthConfig: DroveAuthConfig{AccessToken: ""}})
 	client.Init()
 	assert.Nil(t, client.Leader)
 
-	client = NewDroveClient("http://random.blah.endpoint.non-existent", DroveAuthConfig{AccessToken: ""})
+	client = NewDroveClient(DroveConfig{Endpoint: "http://random.blah.endpoint.non-existent", AuthConfig: DroveAuthConfig{AccessToken: ""}})
 	client.Init()
 	assert.Nil(t, client.Leader)
 
-	client = NewDroveClient(fmt.Sprintf("%s,%s", server.URL, server2.URL), DroveAuthConfig{AccessToken: ""})
+	client = NewDroveClient(DroveConfig{Endpoint: fmt.Sprintf("%s,%s", server.URL, server2.URL), AuthConfig: DroveAuthConfig{AccessToken: ""}})
 	client.Init()
 	assert.NotNil(t, client.Leader)
 	assert.Equal(t, server2.URL, client.Leader.Endpoint)
@@ -101,7 +101,7 @@ func TestLeaderFailover(t *testing.T) {
 		rw.WriteHeader(status2)
 	})
 
-	client := NewDroveClient(fmt.Sprintf("%s,%s", server.URL, server2.URL), DroveAuthConfig{AccessToken: ""})
+	client := NewDroveClient(DroveConfig{Endpoint: fmt.Sprintf("%s,%s", server.URL, server2.URL), AuthConfig: DroveAuthConfig{AccessToken: ""}})
 	client.Init()
 	assert.NotNil(t, client.Leader)
 	assert.Equal(t, server.URL, client.Leader.Endpoint)

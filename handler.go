@@ -30,38 +30,35 @@ func (e *DroveHandler) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	if e.DroveEndpoints.AppsDB == nil {
 		return dns.RcodeServerFailure, fmt.Errorf("Drove DNS not ready")
 	}
-	for _, spec := range e.DroveEndpoints.AppsDB.Apps {
+	app := e.DroveEndpoints.searchApps(r.Question[0].Name)
+	if app != nil {
+		ips := iplist(app.Hosts)
 
-		log.Debugf("%s %s", spec.Vhost, r.Question[0].Name)
-		if spec.Vhost+"." == r.Question[0].Name {
-			ips := iplist(spec.Hosts)
+		a.SetReply(r)
+		a.Authoritative = true
 
-			a.SetReply(r)
-			a.Authoritative = true
+		state := request.Request{W: w, Req: r}
 
-			state := request.Request{W: w, Req: r}
+		log.Debugf("IPS %+v", ips[0])
+		srv := make([]dns.RR, len(app.Hosts))
 
-			log.Debugf("IPS %+v", ips[0])
-			srv := make([]dns.RR, len(spec.Hosts))
-
-			for i, h := range spec.Hosts {
-				srv[i] = &dns.SRV{Hdr: dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeSRV, Class: state.QClass(), Ttl: 30},
-					Port:     uint16(h.Port),
-					Target:   h.Host + ".",
-					Weight:   1,
-					Priority: 1,
-				}
-			}
-
-			if state.QType() == dns.TypeSRV {
-				a.Answer = srv
-			} else {
-				a.Extra = srv
+		for i, h := range app.Hosts {
+			srv[i] = &dns.SRV{Hdr: dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeSRV, Class: state.QClass(), Ttl: 30},
+				Port:     uint16(h.Port),
+				Target:   h.Host + ".",
+				Weight:   1,
+				Priority: 1,
 			}
 		}
+
+		if state.QType() == dns.TypeSRV {
+			a.Answer = srv
+		} else {
+			a.Extra = srv
+		}
 	}
+
 	if len(a.Answer) > 0 || len(a.Extra) > 0 {
-		fmt.Printf("Writing Answer %+v", a)
 		if e.Next != nil {
 			return plugin.NextOrFailure(e.Name(), e.Next, ctx, &CombiningResponseWriter{w, a}, r)
 		}

@@ -42,7 +42,7 @@ func TestRaceCondidtion(t *testing.T) {
 	defer server.Close()
 
 	// Use Client & URL from our local test server
-	client := NewDroveClient(server.URL, DroveAuthConfig{AccessToken: ""})
+	client := NewDroveClient(DroveConfig{Endpoint: server.URL, AuthConfig: DroveAuthConfig{AccessToken: ""}})
 	client.Init()
 	underTest := newDroveEndpoints(&client)
 	go func() {
@@ -59,7 +59,7 @@ func TestRaceCondidtion(t *testing.T) {
 	go func() {
 		for i := 0; i < 100; i++ {
 			go func() {
-				underTest.setApps(&DroveApps{})
+				underTest.setApps(&DroveAppsResponse{})
 
 			}()
 		}

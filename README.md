@@ -17,7 +17,7 @@ The [manual](https://coredns.io/manual/toc/#what-is-coredns) will have more info
 A simple way to consume this plugin, is by adding the following on [plugin.cfg](https://github.com/coredns/coredns/blob/master/plugin.cfg), and recompile it as [detailed on coredns.io](https://coredns.io/2017/07/25/compile-time-enabling-or-disabling-plugins/#build-with-compile-time-configuration-file).
 
 ~~~
-example:github.com/santanusinha/coredns
+drove:github.com/PhonePe/coredns-drove
 ~~~
 
 Put this early in the plugin list, so that *drovedns* is executed before any of the other plugins.
@@ -43,15 +43,29 @@ drovedns {
   accesstoken [TOKEN]
   user [USERNAME]
   pass [PASSWORD]
+  skip_ssl_check
 }
 ~~~
 * `URL` - Comma seperated list of drove controllers 
 * `TOKEN` - In case drove controllers are using bearer auth Complete Authorization header "Bearer ..."
 * `user` `pass` - In case drove is using basic auth
+* `skip_ssl_check` - To skip client side ssl certificate validation
 
 ## Ready
 
 This plugin reports readiness to the ready plugin. It will be immediately ready.
+
+## Metrics
+
+If monitoring is enabled (via the *prometheus* plugin) then the following metrics are exported:
+
+* `coredns_drove_controller_health{host}` - Exports the health of controller at any given point
+The following are client level metrics to monitor apiserver request latency & status codes. `verb` identifies the apiserver [request type](https://kubernetes.io/docs/reference/using-api/api-concepts/#single-resource-api) and `host` denotes the apiserver endpoint.
+* `coredns_drove_sync_total` - captures total app syncs from drove.
+* `coredns_drove_sync_failure` - captures failed app syncs from drove.
+* `coredns_drove_api_total{status_code, method, host}` - captures drove request grouped by `status_code`, `method` & `host`.
+
+
 
 ## Examples
 

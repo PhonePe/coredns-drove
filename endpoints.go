@@ -7,25 +7,36 @@ import (
 
 type DroveEndpoints struct {
 	appsMutext  *sync.RWMutex
-	AppsDB      *DroveApps
+	AppsDB      *DroveAppsResponse
 	DroveClient IDroveClient
 }
 
-func (dr *DroveEndpoints) setApps(appDB *DroveApps) {
+func (dr *DroveEndpoints) setApps(appDB *DroveAppsResponse) {
 	dr.appsMutext.Lock()
 	dr.AppsDB = appDB
 	dr.appsMutext.Unlock()
 }
 
-func (dr *DroveEndpoints) getApps() DroveApps {
+func (dr *DroveEndpoints) getApps() DroveAppsResponse {
 	dr.appsMutext.RLock()
 	defer dr.appsMutext.RUnlock()
 	if dr.AppsDB == nil {
-		return DroveApps{}
+		return DroveAppsResponse{}
 	}
 	return *dr.AppsDB
-
 }
+
+func (dr *DroveEndpoints) searchApps(questionName string) *DroveApp {
+	dr.appsMutext.RLock()
+	defer dr.appsMutext.RUnlock()
+	for _, app := range dr.AppsDB.Apps {
+		if app.Vhost+"." == questionName {
+			return &app
+		}
+	}
+	return nil
+}
+
 func newDroveEndpoints(client IDroveClient) *DroveEndpoints {
 	endpoints := DroveEndpoints{DroveClient: client, appsMutext: &sync.RWMutex{}}
 	ticker := time.NewTicker(10 * time.Second)
@@ -47,10 +58,14 @@ func newDroveEndpoints(client IDroveClient) *DroveEndpoints {
 	})
 	go func() {
 		var syncApp = func() {
+			DroveQueryTotal.Inc()
 			apps, err := endpoints.DroveClient.FetchApps()
 			if err != nil {
+				DroveQueryFailure.Inc()
 				log.Errorf("Error refreshing nodes data %+v", endpoints.AppsDB)
+				return
 			}
+
 			endpoints.setApps(apps)
 		}
 		syncApp()

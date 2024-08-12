@@ -1,20 +1,38 @@
 package drovedns
 
 import (
-	"sync"
-
 	"github.com/coredns/coredns/plugin"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-// requestCount exports a prometheus metric that is incremented every time a query is seen by the example plugin.
-var requestCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Namespace: plugin.Namespace,
-	Subsystem: "example",
-	Name:      "request_count_total",
-	Help:      "Counter of requests made.",
-}, []string{"server"})
+var (
+	DroveQueryTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: plugin.Namespace,
+		Subsystem: pluginName,
+		Name:      "sync_total",
+		Help:      "Counter of Drove sync successful",
+	})
 
-var once sync.Once
+	DroveQueryFailure = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: plugin.Namespace,
+		Subsystem: pluginName,
+		Name:      "sync_failure",
+		Help:      "Counter of Drove syncs failed",
+	})
+
+	DroveApiRequests = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: plugin.Namespace,
+		Subsystem: pluginName,
+		Name:      "api_total",
+		Help:      "Drove api requests total",
+	}, []string{"code", "method", "host"})
+
+	DroveControllerHealth = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: plugin.Namespace,
+		Subsystem: pluginName,
+		Name:      "controller_health",
+		Help:      "Drove controller health",
+	}, []string{"host"})
+)

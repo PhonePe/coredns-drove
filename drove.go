@@ -11,28 +11,17 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
-type LeaderController struct {
-	Endpoint string
-	Host     string
-	Port     int32
-}
+const (
+	FETCH_APP_TIMEOUT    time.Duration = time.Duration(5) * time.Second
+	FETCH_EVENTS_TIMEOUT time.Duration = time.Duration(5) * time.Second
+	PING_TIMEOUT         time.Duration = time.Duration(5) * time.Second
+)
 
-type EndpointStatus struct {
-	Endpoint string
-	Healthy  bool
-	Message  string
-}
-
-type CurrSyncPoint struct {
-	sync.RWMutex
-	LastSyncTime int64
-}
 type IDroveClient interface {
-	FetchApps() (*DroveApps, error)
+	FetchApps() (*DroveAppsResponse, error)
 	FetchRecentEvents(syncPoint *CurrSyncPoint) (*DroveEventSummary, error)
 	PollEvents(callback func(event *DroveEventSummary))
 }
@@ -43,19 +32,13 @@ type DroveClient struct {
 	client     *http.Client
 }
 
-type DroveAuthConfig struct {
-	User        string
-	Pass        string
-	AccessToken string
-}
-
-func NewDroveClient(endpoint string, authConfig DroveAuthConfig) DroveClient {
-	controllerEndpoints := strings.Split(endpoint, ",")
+func NewDroveClient(config DroveConfig) DroveClient {
+	controllerEndpoints := strings.Split(config.Endpoint, ",")
 	endpoints := make([]EndpointStatus, len(controllerEndpoints))
 	for i, e := range controllerEndpoints {
 		endpoints[i] = EndpointStatus{e, true, ""}
 	}
-	tr := &http.Transport{MaxIdleConnsPerHost: 10, TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	tr := &http.Transport{MaxIdleConnsPerHost: 10, TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipSSL}}
 	httpClient := &http.Client{
 		Timeout:   0 * time.Second,
 		Transport: tr,
@@ -63,7 +46,7 @@ func NewDroveClient(endpoint string, authConfig DroveAuthConfig) DroveClient {
 			return http.ErrUseLastResponse
 		},
 	}
-	return DroveClient{Endpoint: endpoints, AuthConfig: &authConfig, client: httpClient}
+	return DroveClient{Endpoint: endpoints, AuthConfig: &config.AuthConfig, client: httpClient}
 }
 
 func (c *DroveClient) Init() error {
@@ -72,19 +55,26 @@ func (c *DroveClient) Init() error {
 	_, err := c.endpoint()
 	return err
 }
-func (c *DroveClient) getRequest(endpoint string, timeout int, obj any) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+func (c *DroveClient) getRequest(path string, timeout time.Duration, obj any) error {
+	host, err := c.endpoint()
+	if err != nil {
+		return err
+	}
+	endpoint := host + path
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
 	if err != nil {
 		return err
 	}
+
 	setHeaders(*c.AuthConfig, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
+		DroveApiRequests.WithLabelValues("err", "GET", host).Inc()
 		return err
 	}
-
+	DroveApiRequests.WithLabelValues(strconv.Itoa(resp.StatusCode), "GET", host).Inc()
 	defer resp.Body.Close()
 	decoder := json.NewDecoder(resp.Body)
 
@@ -95,26 +85,18 @@ func (c *DroveClient) getRequest(endpoint string, timeout int, obj any) error {
 	return nil
 }
 
-func (c *DroveClient) FetchApps() (*DroveApps, error) {
-	endpoint, err := c.endpoint()
-	if err != nil {
-		return nil, err
-	}
+func (c *DroveClient) FetchApps() (*DroveAppsResponse, error) {
 
-	var timeout int = 5
-	jsonapps := &DroveApps{}
-	err = c.getRequest(endpoint+"/apis/v1/endpoints", timeout, jsonapps)
+	jsonapps := &DroveAppsResponse{}
+	err := c.getRequest("/apis/v1/endpoints", FETCH_APP_TIMEOUT, jsonapps)
 	return jsonapps, err
 
 }
 
 func (c *DroveClient) FetchRecentEvents(syncPoint *CurrSyncPoint) (*DroveEventSummary, error) {
-	endpoint, err := c.endpoint()
-	if err != nil {
-		return nil, err
-	}
+
 	var newEventsApiResponse = DroveEventsApiResponse{}
-	err = c.getRequest(endpoint+"/apis/v1/cluster/events/summary?lastSyncTime="+fmt.Sprint(syncPoint.LastSyncTime), 5, &newEventsApiResponse)
+	err := c.getRequest("/apis/v1/cluster/events/summary?lastSyncTime="+fmt.Sprint(syncPoint.LastSyncTime), FETCH_EVENTS_TIMEOUT, &newEventsApiResponse)
 	if err != nil {
 		return nil, err
 	}
@@ -195,6 +177,7 @@ func (c *DroveClient) endpoint() (string, error) {
 func (c *DroveClient) refreshLeaderData() {
 	var endpoint string
 	for _, es := range c.Endpoint {
+		DroveControllerHealth.WithLabelValues(es.Endpoint).Set(boolToDouble(es.Healthy))
 		if es.Healthy {
 			endpoint = es.Endpoint
 		}
@@ -219,9 +202,6 @@ func (c *DroveClient) endpointHealth() {
 		for {
 			select {
 			case <-ticker.C:
-				//logger.WithFields(logrus.Fields{
-				//            "health": health,
-				//}).Info("Reloading endpoint health")
 				shouldReturn := c.updateHealth()
 				if shouldReturn {
 					return
@@ -234,7 +214,7 @@ func (c *DroveClient) endpointHealth() {
 func (c *DroveClient) updateHealth() bool {
 	log.Debugf("Updating health  %+v", c.Endpoint)
 	for i, es := range c.Endpoint {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), PING_TIMEOUT)
 		defer cancel()
 		req, err := http.NewRequestWithContext(ctx, "GET", es.Endpoint+"/apis/v1/ping", nil)
 		if err != nil {

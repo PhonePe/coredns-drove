@@ -36,8 +36,7 @@ func setup(c *caddy.Controller) error {
 
 func parseAndCreate(c *caddy.Controller) (*DroveHandler, error) {
 	c.Next() // Ignore "example" and give us the next token.
-	authConfig := DroveAuthConfig{}
-	var endpoint string
+	config := NewDroveConfig()
 	for c.NextBlock() {
 		switch c.Val() {
 		case "endpoint":
@@ -45,33 +44,32 @@ func parseAndCreate(c *caddy.Controller) (*DroveHandler, error) {
 			if len(args) != 1 {
 				return nil, c.ArgErr()
 			}
-			endpoint = args[0]
+			config.Endpoint = args[0]
 		case "access_token":
 			args := c.RemainingArgs()
 			if len(args) != 1 {
 				return nil, c.ArgErr()
 			}
-			authConfig.AccessToken = args[0]
+			config.AuthConfig.AccessToken = args[0]
 
 		case "user_pass":
 			args := c.RemainingArgs()
 			if len(args) != 2 {
 				return nil, c.ArgErr()
 			}
-			authConfig.User, authConfig.Pass = args[0], args[1]
+			config.AuthConfig.User, config.AuthConfig.Pass = args[0], args[1]
+		case "skip_ssl_check":
+			config.SkipSSL = true
 		default:
 			return nil, fmt.Errorf("Drove: Unknown argument %s found", c.Val())
 		}
 	}
 
-	if endpoint == "" {
-		return nil, fmt.Errorf("Drove: Endpoint needs to be set and cannot be empty")
+	if err := config.Validate(); err != nil {
+		return nil, err
 	}
 
-	if (authConfig.Pass != "" || authConfig.User != "") && authConfig.AccessToken != "" {
-		return nil, fmt.Errorf("Drove: AccessToken and User Pass both cant be set")
-	}
-	drove_client := NewDroveClient(endpoint, authConfig)
+	drove_client := NewDroveClient(config)
 	drove_client.Init()
 	return NewDroveHandler(&drove_client), nil
 }
