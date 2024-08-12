@@ -49,6 +49,9 @@ func TestRaceCondidtion(t *testing.T) {
 		for i := 0; i < 100; i++ {
 			go func() {
 				apps := underTest.getApps()
+				if apps == nil {
+					return
+				}
 				for i, _ := range apps.Apps {
 					t.Logf("%+v", apps.Apps[i].Hosts)
 				}

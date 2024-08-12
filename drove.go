@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -26,10 +27,11 @@ type IDroveClient interface {
 	PollEvents(callback func(event *DroveEventSummary))
 }
 type DroveClient struct {
-	Endpoint   []EndpointStatus
-	Leader     *LeaderController
-	AuthConfig *DroveAuthConfig
-	client     *http.Client
+	EndpointMutex sync.RWMutex
+	Endpoint      []EndpointStatus
+	Leader        *LeaderController
+	AuthConfig    *DroveAuthConfig
+	client        *http.Client
 }
 
 func NewDroveClient(config DroveConfig) DroveClient {
@@ -167,6 +169,8 @@ func leaderController(endpoint string) (*LeaderController, error) {
 }
 
 func (c *DroveClient) endpoint() (string, error) {
+	c.EndpointMutex.RLock()
+	defer c.EndpointMutex.RUnlock()
 	var err error = nil
 	if c.Leader == nil || c.Leader.Endpoint == "" {
 		return "", errors.New("all endpoints are down")
@@ -190,7 +194,8 @@ func (c *DroveClient) refreshLeaderData() {
 			log.Errorf("Leader struct generation failed %+v", err)
 			return
 		}
-
+		c.EndpointMutex.Lock()
+		defer c.EndpointMutex.Unlock()
 		c.Leader = newLeader
 		log.Infof("New leader being set leader %+v", c.Leader)
 	}

@@ -43,8 +43,8 @@ func (w *MockResponseWriter) WriteMsg(res *dns.Msg) error {
 }
 
 func TestServeDNSNotReady(t *testing.T) {
-	handler := DroveHandler{DroveEndpoints: &DroveEndpoints{DroveClient: &MockDroveClient{}}}
 
+	handler := DroveHandler{DroveEndpoints: newDroveEndpoints(&MockDroveClient{})}
 	writer := &MockResponseWriter{
 		validator: func(res *dns.Msg) {
 			assert.Equal(t, 1, len(res.Answer), "One Answer should be returned")

@@ -27,7 +27,7 @@ func (e *DroveHandler) Name() string { return "drove" }
 func (e *DroveHandler) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 
 	a := new(dns.Msg)
-	if e.DroveEndpoints.AppsDB == nil {
+	if e.DroveEndpoints.getApps() == nil {
 		return dns.RcodeServerFailure, fmt.Errorf("Drove DNS not ready")
 	}
 	app := e.DroveEndpoints.searchApps(r.Question[0].Name)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -67,29 +68,32 @@ func TestLeaderElection(t *testing.T) {
 	client.Init()
 	assert.Nil(t, client.Leader)
 
-	client = NewDroveClient(DroveConfig{Endpoint: "http://random.blah.endpoint.non-existent", AuthConfig: DroveAuthConfig{AccessToken: ""}})
-	client.Init()
-	assert.Nil(t, client.Leader)
+	client1 := NewDroveClient(DroveConfig{Endpoint: "http://random.blah.endpoint.non-existent", AuthConfig: DroveAuthConfig{AccessToken: ""}})
+	client1.Init()
+	assert.Nil(t, client1.Leader)
 
-	client = NewDroveClient(DroveConfig{Endpoint: fmt.Sprintf("%s,%s", server.URL, server2.URL), AuthConfig: DroveAuthConfig{AccessToken: ""}})
-	client.Init()
-	assert.NotNil(t, client.Leader)
-	assert.Equal(t, server2.URL, client.Leader.Endpoint)
+	client2 := NewDroveClient(DroveConfig{Endpoint: fmt.Sprintf("%s,%s", server.URL, server2.URL), AuthConfig: DroveAuthConfig{AccessToken: ""}})
+	client2.Init()
+	assert.NotNil(t, client2.Leader)
+	assert.Equal(t, server2.URL, client2.Leader.Endpoint)
 	time.Sleep(2 * time.Second)
-	assert.NotNil(t, client.Leader)
-	assert.Equal(t, server2.URL, client.Leader.Endpoint)
+	assert.NotNil(t, client2.Leader)
+	assert.Equal(t, server2.URL, client2.Leader.Endpoint)
 
 }
 
 func TestLeaderFailover(t *testing.T) {
 	mux := http.NewServeMux()
 	server := httptest.NewServer(mux)
-	status1, status2 := 200, 400
+	var status1, status2 atomic.Int64
+	status1.Store(200)
+	status2.Store(400)
+
 	mux.HandleFunc("/apis/v1/ping", func(rw http.ResponseWriter, req *http.Request) {
 		// Test request parameters
 		// Send response to be tested
 		// rw.Write([]byte(`OK`))
-		rw.WriteHeader(status1)
+		rw.WriteHeader(int(status1.Load()))
 	})
 
 	mux2 := http.NewServeMux()
@@ -98,15 +102,19 @@ func TestLeaderFailover(t *testing.T) {
 		// Test request parameters
 		// Send response to be tested
 		// rw.Write([]byte(`OK`))
-		rw.WriteHeader(status2)
+		rw.WriteHeader(int(status2.Load()))
 	})
 
 	client := NewDroveClient(DroveConfig{Endpoint: fmt.Sprintf("%s,%s", server.URL, server2.URL), AuthConfig: DroveAuthConfig{AccessToken: ""}})
 	client.Init()
 	assert.NotNil(t, client.Leader)
-	assert.Equal(t, server.URL, client.Leader.Endpoint)
-	status1, status2 = 400, 200
+	endpoint, err := client.endpoint()
+	assert.Equal(t, server.URL, endpoint)
+	status1.Store(400)
+	status2.Store(200)
 	time.Sleep(4 * time.Second)
-	assert.NotNil(t, client.Leader)
-	assert.Equal(t, server2.URL, client.Leader.Endpoint)
+	endpoint, err = client.endpoint()
+	assert.Nil(t, err)
+
+	assert.Equal(t, server2.URL, endpoint)
 }

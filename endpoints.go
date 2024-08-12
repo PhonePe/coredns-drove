@@ -6,39 +6,48 @@ import (
 )
 
 type DroveEndpoints struct {
-	appsMutext  *sync.RWMutex
+	appsMutex   *sync.RWMutex
 	AppsDB      *DroveAppsResponse
 	DroveClient IDroveClient
+	AppsByVhost map[string]DroveApp
 }
 
 func (dr *DroveEndpoints) setApps(appDB *DroveAppsResponse) {
-	dr.appsMutext.Lock()
+	var appsByVhost map[string]DroveApp = make(map[string]DroveApp)
+	if appDB != nil {
+		for _, app := range appDB.Apps {
+			appsByVhost[app.Vhost+"."] = app
+		}
+	}
+	dr.appsMutex.Lock()
 	dr.AppsDB = appDB
-	dr.appsMutext.Unlock()
+	dr.AppsByVhost = appsByVhost
+	dr.appsMutex.Unlock()
 }
 
-func (dr *DroveEndpoints) getApps() DroveAppsResponse {
-	dr.appsMutext.RLock()
-	defer dr.appsMutext.RUnlock()
+func (dr *DroveEndpoints) getApps() *DroveAppsResponse {
+	dr.appsMutex.RLock()
+	defer dr.appsMutex.RUnlock()
 	if dr.AppsDB == nil {
-		return DroveAppsResponse{}
+		return nil
 	}
-	return *dr.AppsDB
+	return dr.AppsDB
 }
 
 func (dr *DroveEndpoints) searchApps(questionName string) *DroveApp {
-	dr.appsMutext.RLock()
-	defer dr.appsMutext.RUnlock()
-	for _, app := range dr.AppsDB.Apps {
-		if app.Vhost+"." == questionName {
-			return &app
-		}
+	dr.appsMutex.RLock()
+	defer dr.appsMutex.RUnlock()
+	if dr.AppsByVhost == nil {
+		return nil
+	}
+	if app, ok := dr.AppsByVhost[questionName]; ok {
+		return &app
 	}
 	return nil
 }
 
 func newDroveEndpoints(client IDroveClient) *DroveEndpoints {
-	endpoints := DroveEndpoints{DroveClient: client, appsMutext: &sync.RWMutex{}}
+	endpoints := DroveEndpoints{DroveClient: client, appsMutex: &sync.RWMutex{}}
 	ticker := time.NewTicker(10 * time.Second)
 	done := make(chan bool)
 	reload := make(chan bool)
@@ -62,7 +71,7 @@ func newDroveEndpoints(client IDroveClient) *DroveEndpoints {
 			apps, err := endpoints.DroveClient.FetchApps()
 			if err != nil {
 				DroveQueryFailure.Inc()
-				log.Errorf("Error refreshing nodes data %+v", endpoints.AppsDB)
+				log.Errorf("Error refreshing nodes data")
 				return
 			}
 
