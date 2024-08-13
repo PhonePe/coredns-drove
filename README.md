@@ -81,6 +81,37 @@ example.drove.gateway.com {
 }
 ~~~
 
+## Docker
+Docker image containing coredns compiled with the plugin are available on ghcr.
+<<<<<<< HEAD
+~~ bash
+=======
+
+~~~ bash
+>>>>>>> 276fcdd (Add Docker support)
+docker run  -p1053:1053/udp -p1053:1053 \
+    -e DROVE_ENDPOINT="https://drovecontrol001.exmaple.com:8080,https://drovecontrol002.exmaple.com:8080,https://drovecontrol003.exmaple.com:8080"  \
+    -e DROVE_ACCESS_TOKEN="Bearer <token>"  \
+    -it ghcr.io/phonepe/coredns-drove:<VERSION>
+<<<<<<< HEAD
+~~
+Alternatively you can provide your own Corefile
+~~ bash
+docker run  -p1053:1053/udp -p1053:1053 \
+    -v /path/to/Corefile:/opt/Corefile  \
+    -it ghcr.io/phonepe/coredns-drove:<VERSION>
+~~
+=======
+~~~
+
+Alternatively you can provide your own Corefile
+
+~~~ bash
+docker run  -p1053:1053/udp -p1053:1053 \
+    -v /path/to/Corefile:/opt/Corefile  \
+    -it ghcr.io/phonepe/coredns-drove:<VERSION>
+~~~
+>>>>>>> 276fcdd (Add Docker support)
 
 ## Also See
 
