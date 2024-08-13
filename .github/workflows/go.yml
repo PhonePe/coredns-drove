@@ -8,7 +8,9 @@ env:
 
 on:
   push:
-    branches: [ "master", "docker-support-v2" ]
+    branches: [ "master"]
+    tags:
+      - '*'
   pull_request:
     branches: [ "master" ]
 
