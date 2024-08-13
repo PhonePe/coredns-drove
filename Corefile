@@ -1,0 +1,11 @@
+.:1053 {
+        log
+	whoami
+    cache 30
+	ready
+	forward . /etc/resolv.conf
+	drove {
+		endpoint "https://stg-drovecontrol001.phonepe.nb6:8080,https://stg-drovecontrol002.phonepe.nb6:8080,https://stg-drovecontrol003.phonepe.nb6:8080"
+		access_token "O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiZTU5Y2RmOTEtZmIzOS00MTlkLTlmOWEtODExZTE2Y2U0MmU0Iiwic2lkIjoiYTZmZmZhNWYtMzk4Ni00MmFhLTlkOTUtOTQ4ZjJmNGM1M2FkIiwiaWF0IjoxNzIyNTcwMDI0LCJleHAiOjE3MjMxNzQ4MjR9.XZrL4eyjJc-p9HlNBzbN2m21_MU8zVr4V2cHJCakfsZnZcXBsIf8-QasVCA1X2WGSkERsW9zvouHGj97prOUrA"
+	}
+}
