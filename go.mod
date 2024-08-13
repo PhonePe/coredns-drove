@@ -1,4 +1,4 @@
-module phonepe.com/drovedns
+module github.com/PhonePe/coredns-drove
 
 go 1.20
 
