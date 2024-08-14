@@ -30,16 +30,17 @@ func (e *DroveHandler) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	if e.DroveEndpoints.getApps() == nil {
 		return dns.RcodeServerFailure, fmt.Errorf("Drove DNS not ready")
 	}
+	if len(r.Question) == 0 {
+		return plugin.NextOrFailure(e.Name(), e.Next, ctx, w, r)
+	}
 	app := e.DroveEndpoints.searchApps(r.Question[0].Name)
 	if app != nil {
-		ips := iplist(app.Hosts)
 
 		a.SetReply(r)
 		a.Authoritative = true
 
 		state := request.Request{W: w, Req: r}
 
-		log.Debugf("IPS %+v", ips[0])
 		srv := make([]dns.RR, len(app.Hosts))
 
 		for i, h := range app.Hosts {
@@ -69,14 +70,6 @@ func (e *DroveHandler) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	// Call next plugin (if any).
 	return plugin.NextOrFailure(e.Name(), e.Next, ctx, w, r)
-}
-
-func iplist(res []DroveServiceHost) []string {
-	ips := make([]string, len(res))
-	for i, inst := range res {
-		ips[i] = inst.Host
-	}
-	return ips
 }
 
 // Name implements the Handler interface.
