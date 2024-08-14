@@ -4,7 +4,7 @@
     cache 30
 	ready
 	forward . /etc/resolv.conf
-	metrics
+	prometheus
 	drove {
 		endpoint "https://drovecontrol001.exmaple.com:8080,https://drovecontrol002.exmaple.com:8080,https://drovecontrol003.exmaple.com:8080:8080"
 		access_token "Bearer <token>"

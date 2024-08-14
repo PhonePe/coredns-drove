@@ -1,0 +1,14 @@
+.:1053 {
+    log
+	whoami
+    cache 30
+	ready
+	forward . /etc/resolv.conf
+	prometheus
+	drove {
+		endpoint {$DROVE_ENDPOINT}
+		access_token {$DROVE_ACCESS_TOKEN}
+		user_pass {$DROVE_USERNAME} {$DROVE_PASSWORD}
+		skip_ssl_check 
+	}
+}

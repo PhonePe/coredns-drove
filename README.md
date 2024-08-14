@@ -41,8 +41,7 @@ make
 drovedns {
   endpoint [URL]
   accesstoken [TOKEN]
-  user [USERNAME]
-  pass [PASSWORD]
+  user_pass [USERNAME] [PASSWORD]
   skip_ssl_check
 }
 ~~~
@@ -81,6 +80,23 @@ example.drove.gateway.com {
 }
 ~~~
 
+## Docker
+Docker image containing coredns compiled with the plugin are available on ghcr.
+
+~~~ bash
+docker run  -p1053:1053/udp -p1053:1053 \
+    -e DROVE_ENDPOINT="https://drovecontrol001.exmaple.com:8080,https://drovecontrol002.exmaple.com:8080,https://drovecontrol003.exmaple.com:8080"  \
+    -e DROVE_USERNAME="<USERNAME>" -e DROVE_PASSWORD="<PASSWORD>"  \
+    -it ghcr.io/phonepe/coredns-drove:<VERSION>
+~~~
+
+Alternatively you can provide your own Corefile
+
+~~~ bash
+docker run  -p1053:1053/udp -p1053:1053 \
+    -v /path/to/Corefile:/opt/Corefile  \
+    -it ghcr.io/phonepe/coredns-drove:<VERSION>
+~~~
 
 ## Also See
 
