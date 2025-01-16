@@ -92,6 +92,7 @@ func (dc DroveAuthConfig) Validate() error {
 
 type DroveConfig struct {
 	Endpoint   string
+	Gateway    string
 	AuthConfig DroveAuthConfig
 	SkipSSL    bool
 }

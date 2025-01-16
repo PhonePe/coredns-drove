@@ -29,6 +29,10 @@ func (*MockDroveClient) PollEvents(callback func(event *DroveEventSummary)) {
 
 }
 
+func (*MockDroveClient) DefinedGateways() []net.IP {
+	return []net.IP{}
+}
+
 type MockResponseWriter struct {
 	dns.ResponseWriter
 	validator   func(ms *dns.Msg)

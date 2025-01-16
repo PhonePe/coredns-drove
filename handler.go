@@ -6,6 +6,7 @@ package drovedns
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/request"
@@ -15,11 +16,12 @@ import (
 // Example is an example plugin to show how to write a plugin.
 type DroveHandler struct {
 	DroveEndpoints *DroveEndpoints
+	Gateways       []net.IP
 	Next           plugin.Handler
 }
 
 func NewDroveHandler(droveClient IDroveClient) *DroveHandler {
-	return &DroveHandler{DroveEndpoints: newDroveEndpoints(droveClient)}
+	return &DroveHandler{DroveEndpoints: newDroveEndpoints(droveClient), Gateways: droveClient.DefinedGateways()}
 
 }
 func (e *DroveHandler) Name() string { return "drove" }
@@ -40,7 +42,6 @@ func (e *DroveHandler) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		a.Authoritative = true
 
 		state := request.Request{W: w, Req: r}
-
 		srv := make([]dns.RR, len(app.Hosts))
 
 		for i, h := range app.Hosts {
@@ -54,7 +55,19 @@ func (e *DroveHandler) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 		if state.QType() == dns.TypeSRV {
 			a.Answer = srv
-		} else {
+		} else if state.QType() == dns.TypeA {
+			log.Info(fmt.Sprintf("A record requested. Gateways: %v", e.Gateways))
+			if len(e.Gateways) > 0 {
+				aRes := make([]dns.RR, len(e.Gateways))
+				for i, g := range e.Gateways {
+					aRes[i] = &dns.A{Hdr: dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass(), Ttl: 30},
+						A: g,
+					}
+				}
+				a.Answer = aRes
+			}
+		}
+		if len(a.Answer) == 0 {
 			a.Extra = srv
 		}
 	}
