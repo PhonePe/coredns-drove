@@ -56,7 +56,6 @@ func (e *DroveHandler) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		if state.QType() == dns.TypeSRV {
 			a.Answer = srv
 		} else if state.QType() == dns.TypeA {
-			log.Info(fmt.Sprintf("A record requested. Gateways: %v", e.Gateways))
 			if len(e.Gateways) > 0 && len(srv) > 0 {
 				aRes := make([]dns.RR, len(e.Gateways))
 				for i, g := range e.Gateways {
