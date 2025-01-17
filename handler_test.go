@@ -30,7 +30,7 @@ func (*MockDroveClient) PollEvents(callback func(event *DroveEventSummary)) {
 }
 
 func (*MockDroveClient) DefinedGateways() []net.IP {
-	return []net.IP{}
+	return []net.IP{net.ParseIP("127.0.0.1")}
 }
 
 type MockResponseWriter struct {
@@ -81,6 +81,24 @@ func TestServeDNSAnswer(t *testing.T) {
 
 }
 
+func TestServeDNSARecordAnswer(t *testing.T) {
+	handler := NewDroveHandler(&MockDroveClient{})
+	for !handler.Ready() {
+		time.Sleep(1)
+	}
+	writer := &MockResponseWriter{
+		validator: func(res *dns.Msg) {
+			assert.Equal(t, 1, len(res.Answer), "One Answer should be returned")
+			assert.Equal(t, 0, len(res.Extra), "Additional should be empty")
+			assert.Equal(t, net.ParseIP("127.0.0.1"), res.Answer[0].(*dns.A).A, "output  of DefinedGateWays should be the target")
+		}}
+	code, err := handler.ServeDNS(context.Background(), writer, &dns.Msg{Question: []dns.Question{dns.Question{Name: "example.com.", Qtype: dns.TypeA, Qclass: dns.ClassINET}}})
+	assert.Nil(t, err, "Error should be nil")
+	assert.Equal(t, dns.RcodeSuccess, code, "SuccessCode should be returned")
+	assert.Less(t, 0, writer.callCounter, "Message should be written")
+
+}
+
 func TestServeDNSAdditional(t *testing.T) {
 	handler := NewDroveHandler(&MockDroveClient{})
 	for !handler.Ready() {
@@ -93,7 +111,7 @@ func TestServeDNSAdditional(t *testing.T) {
 			assert.Equal(t, "host.", res.Extra[0].(*dns.SRV).Target)
 			assert.Equal(t, uint16(1234), res.Extra[0].(*dns.SRV).Port)
 		}}
-	code, err := handler.ServeDNS(context.Background(), writer, &dns.Msg{Question: []dns.Question{dns.Question{Name: "example.com.", Qtype: dns.TypeA, Qclass: dns.ClassINET}}})
+	code, err := handler.ServeDNS(context.Background(), writer, &dns.Msg{Question: []dns.Question{dns.Question{Name: "example.com.", Qtype: dns.TypeAAAA, Qclass: dns.ClassINET}}})
 	assert.Nil(t, err, "Error should be nil")
 	assert.Equal(t, dns.RcodeSuccess, code, "SuccessCode should be returned")
 	assert.Less(t, 0, writer.callCounter, "Message should be written")
@@ -109,6 +127,25 @@ func TestServeDNSNoMatchingApp(t *testing.T) {
 		validator: func(res *dns.Msg) {
 			assert.Equal(t, 0, len(res.Answer))
 			assert.Equal(t, 1, len(res.Extra))
+			assert.Equal(t, "host.", res.Extra[0].(*dns.SRV).Target)
+			assert.Equal(t, uint16(1234), res.Extra[0].(*dns.SRV).Port)
+		}}
+	code, err := handler.ServeDNS(context.Background(), writer, &dns.Msg{Question: []dns.Question{dns.Question{Name: "example2.com.", Qtype: dns.TypeA, Qclass: dns.ClassINET}}})
+	assert.NotNil(t, err, "Error should be returned")
+	assert.Equal(t, dns.RcodeServerFailure, code, "Failure error code should be returned")
+	assert.Equal(t, 0, writer.callCounter, "Message should not be Written")
+
+}
+
+func TestServeDNSNoMatchingAppALookup(t *testing.T) {
+	handler := NewDroveHandler(&MockDroveClient{})
+	for !handler.Ready() {
+		time.Sleep(1)
+	}
+	writer := &MockResponseWriter{
+		validator: func(res *dns.Msg) {
+			assert.Equal(t, 0, len(res.Answer))
+			assert.Equal(t, 0, len(res.Extra))
 			assert.Equal(t, "host.", res.Extra[0].(*dns.SRV).Target)
 			assert.Equal(t, uint16(1234), res.Extra[0].(*dns.SRV).Port)
 		}}
