@@ -45,6 +45,12 @@ func parseAndCreate(c *caddy.Controller) (*DroveHandler, error) {
 				return nil, c.ArgErr()
 			}
 			config.Endpoint = args[0]
+		case "gateway":
+			args := c.RemainingArgs()
+			if len(args) != 1 {
+				return nil, c.ArgErr()
+			}
+			config.Gateway = args[0]
 		case "access_token":
 			args := c.RemainingArgs()
 			if len(args) != 1 {

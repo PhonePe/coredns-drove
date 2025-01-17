@@ -3,8 +3,15 @@ module phonepe.com/coredns-drove
 go 1.21
 
 require (
-	github.com/PhonePe/coredns-drove v0.0.0-20240813141603-d87054dc87ee
+	github.com/PhonePe/coredns-drove v0.0.0
 	github.com/coredns/coredns v1.11.1
+)
+
+// Uncomment this to use the locally modified code
+// Run: go mod vendor
+// check code being used in vendor/github.com/PhonePe/coredns-drove/
+replace (
+	github.com/PhonePe/coredns-drove v0.0.0 => ../../
 )
 
 require (

@@ -10,11 +10,11 @@ RUN openssl s_client -showcerts -connect sum.golang.org:443 </dev/null 2>/dev/nu
 RUN update-ca-certificates
 
 COPY . /opt/coredns-drove/
-WORKDIR /opt/coredns-drove
+WORKDIR /opt/coredns-drove/cmd/coredns
 RUN go build
 FROM golang:1.20
-COPY --from=build /opt/coredns-drove/coredns-drove /opt
-COPY Corefile /opt/Corefile
+COPY --from=build /opt/coredns-drove/cmd/coredns/coredns-drove /opt
+COPY cmd/coredns/Corefile /opt/Corefile
 WORKDIR /opt
 EXPOSE 1053 1053/udp
 ENTRYPOINT ["/opt/coredns-drove"]

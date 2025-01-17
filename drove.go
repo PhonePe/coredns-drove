@@ -25,6 +25,7 @@ type IDroveClient interface {
 	FetchApps() (*DroveAppsResponse, error)
 	FetchRecentEvents(syncPoint *CurrSyncPoint) (*DroveEventSummary, error)
 	PollEvents(callback func(event *DroveEventSummary))
+	DefinedGateways() []net.IP
 }
 type DroveClient struct {
 	EndpointMutex sync.RWMutex
@@ -32,6 +33,7 @@ type DroveClient struct {
 	Leader        *LeaderController
 	AuthConfig    *DroveAuthConfig
 	client        *http.Client
+	Gateways      []string
 }
 
 func NewDroveClient(config DroveConfig) DroveClient {
@@ -48,7 +50,7 @@ func NewDroveClient(config DroveConfig) DroveClient {
 			return http.ErrUseLastResponse
 		},
 	}
-	return DroveClient{Endpoint: endpoints, AuthConfig: &config.AuthConfig, client: httpClient}
+	return DroveClient{Endpoint: endpoints, AuthConfig: &config.AuthConfig, client: httpClient, Gateways: strings.Split(config.Gateway, ",")}
 }
 
 func (c *DroveClient) Init() error {
@@ -133,6 +135,19 @@ func (c *DroveClient) PollEvents(callback func(event *DroveEventSummary)) {
 			}()
 		}
 	}()
+}
+
+func (c *DroveClient) DefinedGateways() []net.IP {
+	ips := make([]net.IP, 0)
+	if len(c.Gateways) > 0 {
+		for _, g := range c.Gateways {
+			resolvedIPs, error := net.LookupIP(g)
+			if nil == error {
+				ips = append(ips, resolvedIPs...)
+			}
+		}
+	}
+	return ips
 }
 
 func setHeaders(config DroveAuthConfig, req *http.Request) {

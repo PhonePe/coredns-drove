@@ -7,10 +7,8 @@ env:
     IMAGE_NAME: ${{ github.repository }}
 
 on:
-  push:
-    branches: [ "master"]
-    tags:
-      - '*'
+  pull_request:
+    branches: [ "master" ]
 
 jobs:
 
@@ -53,6 +51,6 @@ jobs:
       with:
         context: "."
         file: "cmd/coredns/Dockerfile"
-        push: true
+        push: false
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
