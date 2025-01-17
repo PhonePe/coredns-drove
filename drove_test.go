@@ -34,7 +34,7 @@ func TestAppFetch(t *testing.T) {
 	defer server.Close()
 
 	// Use Client & URL from our local test server
-	client := NewDroveClient(DroveConfig{Endpoint: server.URL, AuthConfig: DroveAuthConfig{AccessToken: ""}})
+	client := NewDroveClient(DroveConfig{Endpoint: server.URL, AuthConfig: DroveAuthConfig{AccessToken: ""}, Gateway: "127.0.0.1"})
 	client.Init()
 	assert.NotNil(t, client.Leader)
 
@@ -64,15 +64,15 @@ func TestLeaderElection(t *testing.T) {
 	})
 
 	// Use Client & URL from our local test server
-	client := NewDroveClient(DroveConfig{Endpoint: server.URL, AuthConfig: DroveAuthConfig{AccessToken: ""}})
+	client := NewDroveClient(DroveConfig{Endpoint: server.URL, AuthConfig: DroveAuthConfig{AccessToken: ""}, Gateway: "127.0.0.1"})
 	client.Init()
 	assert.Nil(t, client.Leader)
 
-	client1 := NewDroveClient(DroveConfig{Endpoint: "http://random.blah.endpoint.non-existent", AuthConfig: DroveAuthConfig{AccessToken: ""}})
+	client1 := NewDroveClient(DroveConfig{Endpoint: "http://random.blah.endpoint.non-existent", AuthConfig: DroveAuthConfig{AccessToken: ""}, Gateway: "127.0.0.1"})
 	client1.Init()
 	assert.Nil(t, client1.Leader)
 
-	client2 := NewDroveClient(DroveConfig{Endpoint: fmt.Sprintf("%s,%s", server.URL, server2.URL), AuthConfig: DroveAuthConfig{AccessToken: ""}})
+	client2 := NewDroveClient(DroveConfig{Endpoint: fmt.Sprintf("%s,%s", server.URL, server2.URL), AuthConfig: DroveAuthConfig{AccessToken: ""}, Gateway: "127.0.0.1"})
 	client2.Init()
 	assert.NotNil(t, client2.Leader)
 	assert.Equal(t, server2.URL, client2.Leader.Endpoint)
@@ -105,7 +105,7 @@ func TestLeaderFailover(t *testing.T) {
 		rw.WriteHeader(int(status2.Load()))
 	})
 
-	client := NewDroveClient(DroveConfig{Endpoint: fmt.Sprintf("%s,%s", server.URL, server2.URL), AuthConfig: DroveAuthConfig{AccessToken: ""}})
+	client := NewDroveClient(DroveConfig{Endpoint: fmt.Sprintf("%s,%s", server.URL, server2.URL), AuthConfig: DroveAuthConfig{AccessToken: ""}, Gateway: "127.0.0.1"})
 	client.Init()
 	assert.NotNil(t, client.Leader)
 	endpoint, err := client.endpoint()
