@@ -73,8 +73,9 @@ In this configuration, we resolve queries through the plugin and enrich the answ
 ~~~ corefile
 example.drove.gateway.com {
   drovedns {
-    endpoint "http://drove-control001.example.com:8080,http://drove-control002.example.com:8080"
-    accesstoken "Bearer foo"
+    endpoint "http://drove-control001.example.com:8080,http://drove-control002.example.com:8080",
+    gateway "example.drove.gateway.com",
+    user_pass "guest" "guest"
   }
   forward . /etc/resolv.conf
 }
@@ -86,7 +87,10 @@ Docker image containing coredns compiled with the plugin are available on ghcr.
 ~~~ bash
 docker run  -p1053:1053/udp -p1053:1053 \
     -e DROVE_ENDPOINT="https://drovecontrol001.exmaple.com:8080,https://drovecontrol002.exmaple.com:8080,https://drovecontrol003.exmaple.com:8080"  \
-    -e DROVE_USERNAME="<USERNAME>" -e DROVE_PASSWORD="<PASSWORD>"  \
+    -e DROVE_USERNAME="<USERNAME>" \
+    -e DROVE_PASSWORD="<PASSWORD>"  \
+    -e DROVE_GATEWAY="10.0.56.1" \
+    -e UPSTREAM_DNS="1.1.1.1" \
     -it ghcr.io/phonepe/coredns-drove:<VERSION>
 ~~~
 

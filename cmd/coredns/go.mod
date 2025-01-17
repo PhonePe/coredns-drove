@@ -7,9 +7,12 @@ require (
 	github.com/coredns/coredns v1.11.1
 )
 
-replace (
-	github.com/PhonePe/coredns-drove v0.0.0 => ../../
-)
+// Uncomment this to use the locally modified code
+// Run: go mod vendor
+// check code being used in vendor/github.com/PhonePe/coredns-drove/
+// replace (
+// 	github.com/PhonePe/coredns-drove v0.0.0 => ../../
+// )
 
 require (
 	cloud.google.com/go/compute v1.23.0 // indirect
